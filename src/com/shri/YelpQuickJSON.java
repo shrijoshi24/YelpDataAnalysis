@@ -19,8 +19,11 @@ public class YelpQuickJSON
 {
 	public static void main(String[] args)
 	{
+		long start = System.currentTimeMillis();
 		QuickJSONParseYelpData pyd = new QuickJSONParseYelpData();
 		pyd.readJSONFile(args);
+		long end = System.currentTimeMillis();
+		System.out.println("Total time taken: " + (end - start)/1000 + " seconds");
 	}
 }
 
@@ -62,22 +65,23 @@ class QuickJSONParseYelpData
 				}
 				catch(JSONParsingException ex)
 				{
-					
+//					System.out.println("Line No.: " + lineNo);
+//					ex.printStackTrace();
 				}
 				if(jsonDataMap != null)
 				{
 					String value = (String) jsonDataMap.get("type");
 					if("review".equalsIgnoreCase(value))
 					{
-						getReviewDetails(jsonDataMap);
+						getReviewDetails(jsonDataMap, lineNo);
 					}
 					else if("business".equalsIgnoreCase(value))
 					{
-						getBusinessDetails(jsonDataMap);
+						getBusinessDetails(jsonDataMap, lineNo);
 					}
 					else if("user".equalsIgnoreCase(value))
 					{
-						getUserDetails(jsonDataMap);
+						getUserDetails(jsonDataMap, lineNo);
 					}
 					else
 					{
@@ -108,7 +112,7 @@ class QuickJSONParseYelpData
 		}
 	}
 
-	private void getBusinessDetails(Map jsonDataMap)
+	private void getBusinessDetails(Map jsonDataMap, int lineNo)
 	{
 		StringBuilder eachLine = new StringBuilder();
 		try
@@ -219,10 +223,12 @@ class QuickJSONParseYelpData
 		}
 		catch(IOException ex)
 		{
+			System.out.println("Line No.: " + lineNo);
+			ex.printStackTrace();
 		}
 	}
 
-	private void getReviewDetails(Map jsonDataMap)
+	private void getReviewDetails(Map jsonDataMap, int lineNo)
 	{
 		StringBuilder eachLine = new StringBuilder();
 		StringBuilder reviewNWLine = new StringBuilder();
@@ -237,47 +243,66 @@ class QuickJSONParseYelpData
 			eachLine.append("cool:" + votesMap.get("cool"));
 			eachLine.append(",");
 			
-			String userID = (String) jsonDataMap.get("user_id");
-			eachLine.append(userID);
+			String text = (String) jsonDataMap.get("user_id");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
 			//Also add userID to ReviewNW csv for Vertex1, Vertex2.
-			reviewNWLine.append(userID);
+			reviewNWLine.append(text);
 			reviewNWLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("review_id"));
+			text = (String) jsonDataMap.get("review_id");
+			text = text.replace(",", "*");
+			String reviewID = text;
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("stars"));
+			text = (String) jsonDataMap.get("stars");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("date"));
+			text = (String) jsonDataMap.get("date");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			String text = (String) jsonDataMap.get("text");
+			text = (String) jsonDataMap.get("text");
 			// text = text.replace(separator, " ");
 			text = text.replace("\\n", "");
 			text = text.replace(",", "*");
 			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("type"));
+			text = (String) jsonDataMap.get("type");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			String businessID = (String) jsonDataMap.get("business_id");
-			eachLine.append(businessID);
+			text = (String) jsonDataMap.get("business_id");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			// eachLine.append(",");
-			reviewNWLine.append(businessID);
+			reviewNWLine.append(text);
+			
 			
 			reviewBW.write(eachLine.toString());
 			reviewBW.newLine();
+			
+			reviewNWLine.append(",");
+			reviewNWLine.append(reviewID);
+			reviewNWBW.write(reviewNWLine.toString()); //userID,businessID,reviewID
+			reviewNWBW.newLine();
 		}
 		catch(IOException ex)
 		{
+			System.out.println("Line No.: " + lineNo);
+			ex.printStackTrace();
 		}
 	}
 
-	private void getUserDetails(Map jsonDataMap)
+	private void getUserDetails(Map jsonDataMap, int lineNo)
 	{
 		StringBuilder eachLine = new StringBuilder();
 		try
@@ -290,22 +315,34 @@ class QuickJSONParseYelpData
 			eachLine.append("cool:" + votesMap.get("cool"));
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("user_id"));
+			String text = (String) jsonDataMap.get("user_id");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("name"));
+			text = (String) jsonDataMap.get("name");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("url"));
+			text = (String) jsonDataMap.get("url");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("average_stars"));
+			text = (String) jsonDataMap.get("average_stars");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("review_count"));
+			text = (String) jsonDataMap.get("review_count");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			eachLine.append(",");
 			
-			eachLine.append(jsonDataMap.get("type"));
+			text = (String) jsonDataMap.get("type");
+			text = text.replace(",", "*");
+			eachLine.append(text);
 			// eachLine.append(",");
 			
 			userBW.write(eachLine.toString());
@@ -313,6 +350,8 @@ class QuickJSONParseYelpData
 		}
 		catch(IOException ex)
 		{
+			System.out.println("Line No.: " + lineNo);
+			ex.printStackTrace();
 		}
 	}
 

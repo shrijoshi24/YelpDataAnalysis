@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class NWDataGenerator
 {
@@ -27,9 +28,19 @@ class NodeXLDataGenerator
 	
 	BufferedReader businessesDetailsBR;
 	
+	BufferedReader reviewDetailsBR;
+	
+	BufferedWriter topUsersDetailsBW;
+	
+	BufferedWriter topBusinessesDetailsBW;
+	
+	BufferedWriter topReviewDetailsBW;
+	
 	HashMap<String, UserDetails> userDetailsMap = new HashMap<String, UserDetails>();
 	
 	HashMap<String, BusinessesDetails> businessesDetailsMap = new HashMap<String, BusinessesDetails>();
+	
+	HashMap<String, ReviewDetails> reviewDetailsMap = new HashMap<String, ReviewDetails>();
 	
 	BufferedWriter nodeXLEdgesBW;
 	
@@ -76,6 +87,16 @@ class NodeXLDataGenerator
 			e.printStackTrace();
 		}
 		
+		File reviewDetailsFile = new File(filesPath + "//" + "ReviewsDetails.csv");
+		try
+		{
+			reviewDetailsBR = new BufferedReader(new FileReader(reviewDetailsFile));
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		
 		File nodeXLEdgesFile = new File(filesPath + "//" + "NodeXLEdges.csv");
 		if(nodeXLEdgesFile.exists())
 		{
@@ -84,6 +105,48 @@ class NodeXLDataGenerator
 		try
 		{
 			nodeXLEdgesBW = new BufferedWriter(new FileWriter(nodeXLEdgesFile));
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		File topUsersFile = new File(filesPath + "//" + "topUsers.csv");
+		if(topUsersFile.exists())
+		{
+			topUsersFile.delete();
+		}
+		try
+		{
+			topUsersDetailsBW = new BufferedWriter(new FileWriter(topUsersFile));
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		File topBusinessesFile = new File(filesPath + "//" + "topBusinesses.csv");
+		if(topBusinessesFile.exists())
+		{
+			topBusinessesFile.delete();
+		}
+		try
+		{
+			topBusinessesDetailsBW = new BufferedWriter(new FileWriter(topBusinessesFile));
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		File topReviewsFile = new File(filesPath + "//" + "topReviews.csv");
+		if(topReviewsFile.exists())
+		{
+			topReviewsFile.delete();
+		}
+		try
+		{
+			topReviewDetailsBW = new BufferedWriter(new FileWriter(topReviewsFile));
 		}
 		catch(IOException e)
 		{
@@ -98,9 +161,19 @@ class NodeXLDataGenerator
 			reviewNWBR.close();
 			userDetailsBR.close();
 			businessesDetailsBR.close();
+			reviewDetailsBR.close();
 			
 			nodeXLEdgesBW.flush();
 			nodeXLEdgesBW.close();
+			
+			topUsersDetailsBW.flush();
+			topUsersDetailsBW.close();
+			
+			topBusinessesDetailsBW.flush();
+			topBusinessesDetailsBW.close();
+			
+			topReviewDetailsBW.flush();
+			topReviewDetailsBW.close();
 		}
 		catch(IOException e)
 		{
@@ -113,21 +186,23 @@ class NodeXLDataGenerator
 	{
 		// read user details
 		String eachLine;
+		HashSet<String> userIDSet = new HashSet<String>();
+		HashSet<String> businessIDSet = new HashSet<String>(); 
 		try
 		{
 			eachLine = reviewNWBR.readLine();
 			while(eachLine != null)
 			{
-				String pair[] = eachLine.split(",");
-				String userID = pair[0];
-				String businessID = pair[1];
+				String entry[] = eachLine.split(",");
+				String userID = entry[0];
+				String businessID = entry[1];
+				String reviewID = entry[2];
 				
 				UserDetails ud = userDetailsMap.get(userID);
 				BusinessesDetails bd = businessesDetailsMap.get(businessID);
 				if((ud != null) && (bd != null))
 				{
-					String userName = ud.getName();
-					String businessName = bd.getName();
+					
 					int userReviewCount = 0, businesReviewCount = 0;
 					try
 					{
@@ -141,9 +216,32 @@ class NodeXLDataGenerator
 					{
 						ex.printStackTrace();
 					}
-					if(userReviewCount >= 1000 && businesReviewCount >= 170)
+					if(userReviewCount >= 1000 && businesReviewCount >= 170) //relevant users
 					{
-						String edgeLine = "U__"+userName + "," + "B__"+businessName;
+						String userName = "U_" + ud.getName(); //prepend U
+						String businessName = "B_" + bd.getName(); //prepend B
+						
+						if(!userIDSet.contains(userID))
+						{
+							userIDSet.add(userID);
+							StringBuilder userSB = new StringBuilder();
+							userSB.append(userName+","+ud.getVotes()+","+ud.getAverage_stars()+","+ud.getReview_count());
+							topUsersDetailsBW.write(userSB.toString());
+							topUsersDetailsBW.newLine();
+						}
+						
+						if(!businessIDSet.contains(businessID))
+						{
+							businessIDSet.add(businessID);
+							StringBuilder businessSB = new StringBuilder();
+							businessSB.append(businessName+","+bd.getFull_address()+","+bd.getCity()+","+bd.getState()+","+bd.getStars()+","+bd.getReview_count());
+							topBusinessesDetailsBW.write(businessSB.toString());
+							topBusinessesDetailsBW.newLine();
+						}
+						
+						ReviewDetails rd = reviewDetailsMap.get(reviewID);
+						String rdStr = rd.getVotes() + "," + rd.getStars() + "," + rd.getDate() + "," + rd.getText() + "," + rd.getText().length();
+						String edgeLine = userName + "," + businessName + "," + rdStr;
 						nodeXLEdgesBW.write(edgeLine);
 						nodeXLEdgesBW.newLine();
 					}
@@ -201,6 +299,26 @@ class NodeXLDataGenerator
 		{
 			e.printStackTrace();
 		}
+		
+		//read review details
+		try
+		{
+			eachLine = reviewDetailsBR.readLine();
+			eachLine = reviewDetailsBR.readLine();
+			while(eachLine != null)
+			{
+				String reviewArr[] = eachLine.split(",");
+				String reviewID = reviewArr[2];
+				ReviewDetails rd = new ReviewDetails(reviewArr[0], reviewArr[3], reviewArr[4], 
+					reviewArr[5], reviewArr[6], reviewArr[7]);
+				reviewDetailsMap.put(reviewID, rd);
+				eachLine = reviewDetailsBR.readLine();
+			}
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 	
 	class BusinessesDetails
@@ -242,35 +360,35 @@ class NodeXLDataGenerator
 			 this.type = type;
 		}
 
-//		public String getFull_address()
-//		{
-//			return full_address;
-//		}
-//
-//		public String getSchools()
-//		{
-//			return schools;
-//		}
-//
-//		public String getOpen()
-//		{
-//			return open;
-//		}
-//
-//		public String getCategories()
-//		{
-//			return categories;
-//		}
+		public String getFull_address()
+		{
+			return full_address;
+		}
+
+		public String getSchools()
+		{
+			return schools;
+		}
+
+		public String getOpen()
+		{
+			return open;
+		}
+
+		public String getCategories()
+		{
+			return categories;
+		}
 //
 //		public String getPhoto_url()
 //		{
 //			return photo_url;
 //		}
 //
-//		public String getCity()
-//		{
-//			return city;
-//		}
+		public String getCity()
+		{
+			return city;
+		}
 //
 		public String getReview_count()
 		{
@@ -297,15 +415,15 @@ class NodeXLDataGenerator
 //			return longitude;
 //		}
 //
-//		public String getState()
-//		{
-//			return state;
-//		}
+		public String getState()
+		{
+			return state;
+		}
 //
-//		public String getStars()
-//		{
-//			return stars;
-//		}
+		public String getStars()
+		{
+			return stars;
+		}
 //
 //		public String getLatitude()
 //		{
@@ -339,11 +457,10 @@ class NodeXLDataGenerator
 			this.type = type;
 		}
 
-//		public String getVotes()
-//		{
-//			return votes;
-//		}
-//
+		public String getVotes()
+		{
+			return votes;
+		}
 
 		public String getName()
 		{
@@ -355,14 +472,62 @@ class NodeXLDataGenerator
 //			return url;
 //		}
 //
-//		public String getAverage_stars()
-//		{
-//			return average_stars;
-//		}
-//
+		public String getAverage_stars()
+		{
+			return average_stars;
+		}
+
 		public String getReview_count()
 		{
 			return review_count;
+		}
+//
+//		public String getType()
+//		{
+//			return type;
+//		}
+		
+	}
+	
+	class ReviewDetails
+	{
+		private String votes;
+//		private String user_id;
+//		private String review_id;
+		private String stars;
+		private String date;
+		private String text;
+		private String type;
+		private String business_id;
+		
+		public ReviewDetails(String votes, String stars, String date, String text, String type, String business_id)
+		{
+			this.votes = votes;
+			this.stars = stars;
+			this.date = date;
+			this.text = text;
+			this.type = type;
+			this.business_id = business_id;
+		}
+
+		public String getVotes()
+		{
+			return votes;
+		}
+
+		public String getStars()
+		{
+			return stars;
+		}
+
+		public String getDate()
+		{
+			return date;
+		}
+
+		public String getText()
+		{
+			return text;
 		}
 //
 //		public String getType()
